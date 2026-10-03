@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block title %}Faculty Substitution Management{% endblock %}
+
+{% block content %}
+<div class="substitution-shell">
+    <div class="page-header-row">
+        <div class="page-heading-group">
+            <h2>Faculty Substitution Management</h2>
+            <p>Edumerge-inspired intelligent workload & leave substitution engine with automatic conflict checking.</p>
+        </div>
+        <div class="page-action-group">
+            <button class="btn-accent-custom" data-bs-toggle="modal" data-bs-target="#requestSubModal">
+                <i class="fa-solid fa-user-clock"></i> New Substitution Request
+            </button>
+        </div>
+    </div>
+
+    <!-- Active Replacement Recommendation Workbench -->
+    <div class="card-saas mb-4">
+        <div class="card-saas-header">
+            <div class="card-saas-title">
+                <i class="fa-solid fa-brain text-accent"></i>
+                <h4>Smart Faculty Replacement Finder</h4>
+            </div>
+            <span class="badge-saas badge-saas-accent">AI & Rule-Based Matcher</span>
+        </div>
+        <div class="card-saas-body">
+            <div class="row g-3 align-items-end mb-4">
+                <div class="col-md-8">
+                    <label class="form-label-saas">Select Timetable Session Affected by Faculty Absence:</label>
+                    <select class="form-select-saas" id="subSessionSelect">
+                        <option value="">Choose an active scheduled class...</option>
+                        {% for s in sessions %}
+                        <option value="{{ s.id }}">
+                            {{ s.day }} Period {{ s.period }} ({{ s.start_time }}-{{ s.end_time }}) &mdash; {{ s.subject_name }} ({{ s.faculty_name }}, Batch: {{ s.batch_name }}, Room: {{ s.classroom_name }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <button class="btn-primary-custom w-100 justify-content-center" id="findReplacementsBtn">
+                        <i class="fa-solid fa-magnifying-glass"></i> Find Available Substitutes
+                    </button>
+                </div>
+            </div>
+
+            <!-- Candidate Replacements Container -->
+            <div id="recommendationsContainer" class="d-none">
+                <h6 class="fw-bold mb-3 text-primary"><i class="fa-solid fa-list-check me-2"></i>Ranked Candidate Instructors:</h6>
+                <div class="table-saas-container">
+                    <table class="table-saas" id="recommendationsTable">
+                        <thead>
+                            <tr>
+                                <th>Candidate Faculty</th>
+                                <th>Department</th>
+                                <th>Designation</th>
+                                <th>Workload (Sched / Max)</th>
+                                <th>Match Score</th>
+                                <th>Availability Status</th>
+                                <th class="text-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recommendationsTableBody">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Substitution History & Records Table -->
+    <div class="card-saas">
+        <div class="card-saas-header">
+            <div class="card-saas-title">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+                <h4>Faculty Substitution Log & Approval History</h4>
+            </div>
+            <span class="badge-saas badge-saas-secondary" id="subHistoryCountBadge">0 records</span>
+        </div>
+        <div class="card-saas-body p-0">
+            <div class="table-saas-container">
+                <table class="table-saas" id="substitutionHistoryTable">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Class Session</th>
+                            <th>Original Faculty</th>
+                            <th>Substitute Faculty</th>
+                            <th>Day & Period</th>
+                            <th>Reason</th>
+                            <th>Status</th>
+                            <th>Recorded Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="subHistoryTableBody">
+                        <tr>
+                            <td colspan="8" class="text-center py-4 text-muted">Loading substitution history...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: New Substitution Request -->
+<div class="modal fade" id="requestSubModal" tabindex="-1" aria-labelledby="requestSubModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content modal-content-saas">
+            <div class="modal-header-saas">
+                <h5 class="modal-title" id="requestSubModalLabel"><i class="fa-solid fa-user-plus text-primary me-2"></i>Log Faculty Absence & Substitute</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="directSubForm">
+                <div class="modal-body-saas">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label-saas">Affected Session *</label>
+                            <select class="form-select-saas" id="modalSessionSelect" required>
+                                <option value="">Select session...</option>
+                                {% for s in sessions %}
+                                <option value="{{ s.id }}">{{ s.day }} P{{ s.period }} &ndash; {{ s.subject_name }} ({{ s.faculty_name }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label-saas">Assign Substitute Faculty *</label>
+                            <select class="form-select-saas" id="modalSubFacultySelect" required>
+                                <option value="">Select replacement...</option>
+                                {% for f in faculty %}
+                                <option value="{{ f.id }}">{{ f.name }} ({{ f.department }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label-saas">Reason / Remark</label>
+                            <input type="text" class="form-control-saas" id="modalSubReason" placeholder="e.g. Conference attendance, medical leave">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer-saas">
+                    <button type="button" class="btn-white-custom" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn-primary-custom"><i class="fa-solid fa-check"></i> Approve & Apply</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/substitution.js"></script>
+{% endblock %}

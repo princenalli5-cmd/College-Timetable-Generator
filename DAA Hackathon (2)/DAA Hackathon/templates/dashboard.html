@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+
+{% block title %}Academic Scheduling Dashboard{% endblock %}
+
+{% block content %}
+<div class="dashboard-shell">
+    <!-- Page Header & Quick Action Row -->
+    <div class="page-header-row">
+        <div class="page-heading-group">
+            <h2>Campus Timetable Overview</h2>
+            <p>Real-time statistics, classroom utilization, faculty workload distribution, and timetable health.</p>
+        </div>
+        <div class="page-action-group">
+            <a href="/generate" class="btn-accent-custom">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> Generate Timetable
+            </a>
+            <a href="/timetable" class="btn-white-custom">
+                <i class="fa-solid fa-calendar-week"></i> View Calendar
+            </a>
+        </div>
+    </div>
+
+    <!-- 6 Dashboard Statistics Cards -->
+    <div class="row g-3 mb-4">
+        <!-- 1. Total Subjects -->
+        <div class="col-xl-2 col-md-4 col-sm-6">
+            <div class="stat-kpi-card">
+                <div class="kpi-icon-wrap kpi-icon-primary"><i class="fa-solid fa-book-bookmark"></i></div>
+                <div class="kpi-content">
+                    <span class="kpi-label">Subjects</span>
+                    <div class="kpi-value" id="kpiSubjects">-</div>
+                    <span class="kpi-subtext">Active Courses</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Total Faculty -->
+        <div class="col-xl-2 col-md-4 col-sm-6">
+            <div class="stat-kpi-card">
+                <div class="kpi-icon-wrap kpi-icon-accent"><i class="fa-solid fa-chalkboard-user"></i></div>
+                <div class="kpi-content">
+                    <span class="kpi-label">Faculty</span>
+                    <div class="kpi-value" id="kpiFaculty">-</div>
+                    <span class="kpi-subtext">Instructors</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Total Classrooms -->
+        <div class="col-xl-2 col-md-4 col-sm-6">
+            <div class="stat-kpi-card">
+                <div class="kpi-icon-wrap kpi-icon-success"><i class="fa-solid fa-building"></i></div>
+                <div class="kpi-content">
+                    <span class="kpi-label">Classrooms</span>
+                    <div class="kpi-value" id="kpiClassrooms">-</div>
+                    <span class="kpi-subtext">Halls & Labs</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Total Student Batches -->
+        <div class="col-xl-2 col-md-4 col-sm-6">
+            <div class="stat-kpi-card">
+                <div class="kpi-icon-wrap kpi-icon-purple"><i class="fa-solid fa-users-rectangle"></i></div>
+                <div class="kpi-content">
+                    <span class="kpi-label">Batches</span>
+                    <div class="kpi-value" id="kpiBatches">-</div>
+                    <span class="kpi-subtext">Sections</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. Scheduled Classes -->
+        <div class="col-xl-2 col-md-4 col-sm-6">
+            <div class="stat-kpi-card">
+                <div class="kpi-icon-wrap kpi-icon-primary"><i class="fa-solid fa-calendar-check"></i></div>
+                <div class="kpi-content">
+                    <span class="kpi-label">Scheduled</span>
+                    <div class="kpi-value text-primary" id="kpiScheduled">-</div>
+                    <span class="kpi-subtext">Assigned Hours</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 6. Unscheduled Classes -->
+        <div class="col-xl-2 col-md-4 col-sm-6">
+            <div class="stat-kpi-card">
+                <div class="kpi-icon-wrap kpi-icon-warning"><i class="fa-solid fa-clock-rotate-left"></i></div>
+                <div class="kpi-content">
+                    <span class="kpi-label">Unscheduled</span>
+                    <div class="kpi-value text-warning" id="kpiUnscheduled">-</div>
+                    <span class="kpi-subtext">Pending Slots</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Row 2: Charts & Quick Actions -->
+    <div class="row g-4 mb-4">
+        <!-- A. Weekly Scheduling Overview (Classes per Day) -->
+        <div class="col-lg-8">
+            <div class="card-saas">
+                <div class="card-saas-header">
+                    <div class="card-saas-title">
+                        <i class="fa-solid fa-chart-column"></i>
+                        <h4>Weekly Scheduling Overview</h4>
+                    </div>
+                    <span class="badge-saas badge-saas-primary">Monday &ndash; Friday</span>
+                </div>
+                <div class="card-saas-body">
+                    <div style="height: 270px; position: relative;">
+                        <canvas id="weeklyOverviewChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- E. Quick Actions Card -->
+        <div class="col-lg-4">
+            <div class="card-saas h-100">
+                <div class="card-saas-header">
+                    <div class="card-saas-title">
+                        <i class="fa-solid fa-bolt text-warning"></i>
+                        <h4>Quick Actions</h4>
+                    </div>
+                </div>
+                <div class="card-saas-body d-flex flex-column gap-2 justify-content-center">
+                    <a href="/generate" class="btn-accent-custom justify-content-start w-100">
+                        <i class="fa-solid fa-wand-magic-sparkles me-2"></i> Generate Timetable
+                    </a>
+                    <a href="/faculty" class="btn-white-custom justify-content-start w-100">
+                        <i class="fa-solid fa-user-plus me-2 text-primary"></i> Add / Manage Faculty
+                    </a>
+                    <a href="/subjects" class="btn-white-custom justify-content-start w-100">
+                        <i class="fa-solid fa-book-medical me-2 text-primary"></i> Add Academic Subject
+                    </a>
+                    <a href="/classrooms" class="btn-white-custom justify-content-start w-100">
+                        <i class="fa-solid fa-building me-2 text-primary"></i> Manage Classrooms & Labs
+                    </a>
+                    <a href="/substitution" class="btn-white-custom justify-content-start w-100">
+                        <i class="fa-solid fa-user-gear me-2 text-primary"></i> Faculty Substitution
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Row 3: Room Utilization & Faculty Workload Charts -->
+    <div class="row g-4 mb-4">
+        <!-- B. Room Utilization -->
+        <div class="col-lg-6">
+            <div class="card-saas">
+                <div class="card-saas-header">
+                    <div class="card-saas-title">
+                        <i class="fa-solid fa-door-open"></i>
+                        <h4>Classroom & Lab Space Utilization</h4>
+                    </div>
+                    <span class="badge-saas badge-saas-accent">% Weekly Capacity</span>
+                </div>
+                <div class="card-saas-body">
+                    <div style="height: 250px; position: relative;">
+                        <canvas id="roomUtilChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- C. Faculty Workload -->
+        <div class="col-lg-6">
+            <div class="card-saas">
+                <div class="card-saas-header">
+                    <div class="card-saas-title">
+                        <i class="fa-solid fa-user-clock"></i>
+                        <h4>Faculty Teaching Workload</h4>
+                    </div>
+                    <span class="badge-saas badge-saas-success">Scheduled vs Max Allowed</span>
+                </div>
+                <div class="card-saas-body">
+                    <div style="height: 250px; position: relative;">
+                        <canvas id="facultyWorkloadChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Row 4: D. Recent Activities Table -->
+    <div class="card-saas">
+        <div class="card-saas-header">
+            <div class="card-saas-title">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+                <h4>Recent Scheduled Activities & Sessions</h4>
+            </div>
+            <a href="/timetable" class="btn-white-custom btn-sm">Full Schedule &rarr;</a>
+        </div>
+        <div class="card-saas-body p-0">
+            <div class="table-saas-container">
+                <table class="table-saas">
+                    <thead>
+                        <tr>
+                            <th>Session Code</th>
+                            <th>Subject Name</th>
+                            <th>Batch</th>
+                            <th>Faculty Instructor</th>
+                            <th>Room / Hall</th>
+                            <th>Time Window</th>
+                            <th>Algorithm</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recentActivitiesTableBody">
+                        <tr>
+                            <td colspan="7" class="text-center py-4 text-muted">Loading recent academic schedules...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/dashboard.js"></script>
+{% endblock %}

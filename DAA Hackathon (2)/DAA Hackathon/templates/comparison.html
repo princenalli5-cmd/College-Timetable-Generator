@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+
+{% block title %}DAA Algorithm Analysis & Benchmarks{% endblock %}
+
+{% block content %}
+<div class="analysis-shell">
+    <div class="page-header-row">
+        <div class="page-heading-group">
+            <h2>Design & Analysis of Algorithms Evaluation</h2>
+            <p>Empirical benchmarking and theoretical analysis of Graph Coloring, Greedy, and Backtracking algorithms.</p>
+        </div>
+        <div class="page-action-group">
+            <button class="btn-primary-custom" id="runBenchmarkBtn">
+                <i class="fa-solid fa-play"></i> Run Live Benchmark Suite
+            </button>
+        </div>
+    </div>
+
+    <!-- Algorithm KPI Comparison Cards (4 Cards) -->
+    <div class="row g-3 mb-4">
+        <!-- 1. Graph Coloring -->
+        <div class="col-lg-3 col-sm-6">
+            <div class="stat-kpi-card border-top border-4 border-info">
+                <div class="kpi-content">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="badge-saas badge-saas-accent">Welsh-Powell</span>
+                        <i class="fa-solid fa-circle-nodes text-accent"></i>
+                    </div>
+                    <h5 class="fw-bold mb-2">Graph Coloring</h5>
+                    <div class="small text-muted d-flex justify-content-between py-1 border-bottom">
+                        <span>Runtime:</span> <strong class="text-primary" id="gcTime">-- ms</strong>
+                    </div>
+                    <div class="small text-muted d-flex justify-content-between py-1 border-bottom">
+                        <span>Scheduled:</span> <strong class="text-success" id="gcScheduled">-- / --</strong>
+                    </div>
+                    <div class="small text-muted d-flex justify-content-between py-1">
+                        <span>Chromatic No &chi;(G):</span> <strong class="text-accent" id="gcChromatic">-- colors</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Greedy -->
+        <div class="col-lg-3 col-sm-6">
+            <div class="stat-kpi-card border-top border-4 border-success">
+                <div class="kpi-content">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="badge-saas badge-saas-success">Local Search</span>
+                        <i class="fa-solid fa-bolt text-success"></i>
+                    </div>
+                    <h5 class="fw-bold mb-2">Greedy Algorithm</h5>
+                    <div class="small text-muted d-flex justify-content-between py-1 border-bottom">
+                        <span>Runtime:</span> <strong class="text-primary" id="grTime">-- ms</strong>
+                    </div>
+                    <div class="small text-muted d-flex justify-content-between py-1 border-bottom">
+                        <span>Scheduled:</span> <strong class="text-success" id="grScheduled">-- / --</strong>
+                    </div>
+                    <div class="small text-muted d-flex justify-content-between py-1">
+                        <span>Unscheduled:</span> <strong id="grUnscheduled">--</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Backtracking -->
+        <div class="col-lg-3 col-sm-6">
+            <div class="stat-kpi-card border-top border-4 border-primary">
+                <div class="kpi-content">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="badge-saas badge-saas-primary">Exact DFS</span>
+                        <i class="fa-solid fa-code-branch text-primary"></i>
+                    </div>
+                    <h5 class="fw-bold mb-2">Backtracking</h5>
+                    <div class="small text-muted d-flex justify-content-between py-1 border-bottom">
+                        <span>Runtime:</span> <strong class="text-primary" id="btTime">-- ms</strong>
+                    </div>
+                    <div class="small text-muted d-flex justify-content-between py-1 border-bottom">
+                        <span>Scheduled:</span> <strong class="text-success" id="btScheduled">-- / --</strong>
+                    </div>
+                    <div class="small text-muted d-flex justify-content-between py-1">
+                        <span>Backtrack Steps:</span> <strong id="btBacktracks">--</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Hybrid -->
+        <div class="col-lg-3 col-sm-6">
+            <div class="stat-kpi-card border-top border-4 border-warning">
+                <div class="kpi-content">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="badge-saas badge-saas-warning">Greedy + BT</span>
+                        <i class="fa-solid fa-layer-group text-warning"></i>
+                    </div>
+                    <h5 class="fw-bold mb-2">Hybrid Scheduling</h5>
+                    <div class="small text-muted d-flex justify-content-between py-1 border-bottom">
+                        <span>Runtime:</span> <strong class="text-primary" id="hbTime">-- ms</strong>
+                    </div>
+                    <div class="small text-muted d-flex justify-content-between py-1 border-bottom">
+                        <span>Scheduled:</span> <strong class="text-success" id="hbScheduled">-- / --</strong>
+                    </div>
+                    <div class="small text-muted d-flex justify-content-between py-1">
+                        <span>Resolution:</span> <strong class="text-success">Optimal</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Comparative Charts Row -->
+    <div class="row g-4 mb-4">
+        <!-- Runtime Comparison -->
+        <div class="col-lg-6">
+            <div class="card-saas">
+                <div class="card-saas-header">
+                    <div class="card-saas-title">
+                        <i class="fa-solid fa-stopwatch text-primary"></i>
+                        <h4>Algorithm Execution Runtime (ms)</h4>
+                    </div>
+                    <span class="badge-saas badge-saas-primary">Lower is faster</span>
+                </div>
+                <div class="card-saas-body">
+                    <div style="height: 260px; position: relative;">
+                        <canvas id="runtimeComparisonChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scheduled Efficiency Comparison -->
+        <div class="col-lg-6">
+            <div class="card-saas">
+                <div class="card-saas-header">
+                    <div class="card-saas-title">
+                        <i class="fa-solid fa-chart-bar text-success"></i>
+                        <h4>Scheduled vs Unscheduled Classes</h4>
+                    </div>
+                    <span class="badge-saas badge-saas-success">Success Rate</span>
+                </div>
+                <div class="card-saas-body">
+                    <div style="height: 260px; position: relative;">
+                        <canvas id="efficiencyComparisonChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Comparative Matrix Table -->
+    <div class="card-saas mb-4">
+        <div class="card-saas-header">
+            <div class="card-saas-title">
+                <i class="fa-solid fa-table"></i>
+                <h4>DAA Algorithm Benchmark Matrix</h4>
+            </div>
+        </div>
+        <div class="card-saas-body p-0">
+            <div class="table-saas-container">
+                <table class="table-saas" id="comparisonTable">
+                    <thead>
+                        <tr>
+                            <th>Algorithm Paradigm</th>
+                            <th>Time Complexity</th>
+                            <th>Runtime (ms)</th>
+                            <th>Scheduled Classes</th>
+                            <th>Unscheduled</th>
+                            <th>Backtracks</th>
+                            <th>Decisions</th>
+                            <th>Constraint Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="comparisonTableBody">
+                        <tr>
+                            <td colspan="8" class="text-center py-4 text-muted">Running algorithm benchmark suite...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Welsh-Powell Conflict Graph Visualization -->
+    <div class="card-saas">
+        <div class="card-saas-header">
+            <div class="card-saas-title">
+                <i class="fa-solid fa-circle-nodes text-accent"></i>
+                <h4>Welsh-Powell Graph Coloring Topology & Conflict Network</h4>
+            </div>
+            <button class="btn-white-custom btn-sm" id="reloadGraphBtn">
+                <i class="fa-solid fa-rotate"></i> Redraw Network
+            </button>
+        </div>
+        <div class="card-saas-body">
+            <div class="row g-4">
+                <div class="col-lg-4">
+                    <h6 class="fw-bold text-primary mb-3">Graph Theoretical Formulation:</h6>
+                    <ul class="list-unstyled small">
+                        <li class="d-flex justify-content-between py-2 border-bottom">
+                            <span>Vertices |V| (Sessions):</span>
+                            <strong id="graphVCount">--</strong>
+                        </li>
+                        <li class="d-flex justify-content-between py-2 border-bottom">
+                            <span>Conflict Edges |E| (Mutual Clashes):</span>
+                            <strong id="graphECount">--</strong>
+                        </li>
+                        <li class="d-flex justify-content-between py-2 border-bottom">
+                            <span>Chromatic Number &chi;(G):</span>
+                            <strong class="text-accent" id="graphChiCount">--</strong>
+                        </li>
+                        <li class="d-flex justify-content-between py-2 border-bottom">
+                            <span>Available Time Slots (Colors):</span>
+                            <strong>30 (5 Days &times; 6 Periods)</strong>
+                        </li>
+                    </ul>
+                    <div class="p-3 bg-light rounded-3 small text-muted border mt-3">
+                        <i class="fa-solid fa-circle-info text-primary me-1"></i>
+                        In Welsh-Powell scheduling, conflicting vertices cannot share the same color. Since &chi;(G) &le; 30, a completely conflict-free schedule is mathematically guaranteed.
+                    </div>
+                </div>
+
+                <div class="col-lg-8">
+                    <div class="canvas-network-box">
+                        <canvas id="graphCanvas" width="700" height="380"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/algorithms.js"></script>
+{% endblock %}

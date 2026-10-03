@@ -1,0 +1,280 @@
+{% extends "base.html" %}
+
+{% block title %}Classroom & Laboratory Spaces{% endblock %}
+
+{% block content %}
+<div class="management-shell">
+    <div class="page-header-row">
+        <div class="page-heading-group">
+            <h2>Classrooms & Computing Laboratories</h2>
+            <p>Physical teaching facilities, laboratory equipment spaces, seating capacities, and utilization tracking.</p>
+        </div>
+        <div class="page-action-group">
+            <button class="btn-primary-custom" data-bs-toggle="modal" data-bs-target="#addClassroomModal">
+                <i class="fa-solid fa-plus"></i> Add New Classroom
+            </button>
+        </div>
+    </div>
+
+    <!-- Classrooms Table Card -->
+    <div class="card-saas">
+        <div class="card-saas-body p-0">
+            <div class="table-saas-container">
+                <table class="table-saas" id="classroomsTable">
+                    <thead>
+                        <tr>
+                            <th>Room Identifier</th>
+                            <th>Space Type</th>
+                            <th>Seating Capacity</th>
+                            <th>Building & Location</th>
+                            <th>Weekly Bookings</th>
+                            <th>Utilization</th>
+                            <th>Operational Status</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="classroomsTableBody">
+                        <tr>
+                            <td colspan="8" class="text-center py-4 text-muted">Loading academic spaces...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Add Classroom -->
+<div class="modal fade" id="addClassroomModal" tabindex="-1" aria-labelledby="addClassroomModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content modal-content-saas">
+            <div class="modal-header-saas">
+                <h5 class="modal-title" id="addClassroomModalLabel"><i class="fa-solid fa-building text-primary me-2"></i>Add Classroom / Lab</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="addClassroomForm">
+                <div class="modal-body-saas">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label-saas">Room Code / Name *</label>
+                            <input type="text" class="form-control-saas" id="roomName" placeholder="e.g. LH-301 or CS-LAB-2" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label-saas">Room Type *</label>
+                            <select class="form-select-saas" id="roomType" required>
+                                <option value="Normal" selected>Normal Lecture Hall</option>
+                                <option value="Lab">Computing / Practical Lab</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label-saas">Seating Capacity *</label>
+                            <input type="number" class="form-control-saas" id="roomCapacity" value="60" min="10" max="250" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label-saas">Building / Block</label>
+                            <input type="text" class="form-control-saas" id="roomBuilding" value="Main Academic Block">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label-saas">Operational Status</label>
+                            <select class="form-select-saas" id="roomAvailable">
+                                <option value="1" selected>Active & Ready for Allocation</option>
+                                <option value="0">Under Maintenance / Inactive</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer-saas">
+                    <button type="button" class="btn-white-custom" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn-primary-custom"><i class="fa-solid fa-check"></i> Save Classroom</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Room Schedule Calendar / Utilization View -->
+<div class="modal fade" id="roomScheduleModal" tabindex="-1" aria-labelledby="roomScheduleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content modal-content-saas">
+            <div class="modal-header-saas">
+                <h5 class="modal-title" id="roomScheduleModalLabel">
+                    <i class="fa-solid fa-door-open text-primary me-2"></i>Classroom Occupancy Schedule
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body-saas" id="roomScheduleModalBody">
+                <!-- Dynamically populated -->
+            </div>
+            <div class="modal-footer-saas">
+                <button type="button" class="btn-white-custom" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    loadClassrooms();
+
+    document.getElementById('addClassroomForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const payload = {
+            name: document.getElementById('roomName').value.trim().toUpperCase(),
+            room_type: document.getElementById('roomType').value,
+            capacity: parseInt(document.getElementById('roomCapacity').value) || 60,
+            building: document.getElementById('roomBuilding').value.trim(),
+            is_available: parseInt(document.getElementById('roomAvailable').value)
+        };
+
+        try {
+            const res = await fetch('/api/classrooms', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (res.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('addClassroomModal')).hide();
+                document.getElementById('addClassroomForm').reset();
+                showToast("Classroom registered successfully.");
+                loadClassrooms();
+            } else {
+                showToast(data.message || "Failed to add classroom", true);
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    });
+});
+
+async function loadClassrooms() {
+    const tbody = document.getElementById('classroomsTableBody');
+    try {
+        const res = await fetch('/api/classrooms');
+        const json = await res.json();
+        const rooms = json.data || [];
+
+        if (rooms.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted">No classrooms found.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = rooms.map(r => {
+            const isLab = r.room_type === 'Lab';
+            const utilBadge = r.utilization_pct > 75
+                ? 'badge-saas-danger'
+                : r.utilization_pct > 30 ? 'badge-saas-primary' : 'badge-saas-secondary';
+
+            return `
+                <tr>
+                    <td>
+                        <strong class="d-block text-primary">${r.name}</strong>
+                        <small class="text-muted">ID: ROOM-${r.id}</small>
+                    </td>
+                    <td>
+                        <span class="badge-saas ${isLab ? 'badge-saas-accent' : 'badge-saas-primary'}">
+                            <i class="fa-solid ${isLab ? 'fa-flask' : 'fa-chalkboard'}"></i>
+                            ${r.room_type}
+                        </span>
+                    </td>
+                    <td><strong>${r.capacity}</strong> seats</td>
+                    <td><span class="text-muted">${r.building}</span></td>
+                    <td><strong>${r.booked_periods || 0}</strong> / 30 periods</td>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="progress flex-grow-1" style="height: 6px; width: 60px;">
+                                <div class="progress-bar ${isLab ? 'bg-info' : 'bg-primary'}" role="progressbar" style="width: ${r.utilization_pct || 0}%"></div>
+                            </div>
+                            <span class="small fw-semibold">${r.utilization_pct || 0}%</span>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge-saas ${r.is_available ? 'badge-saas-success' : 'badge-saas-danger'}">
+                            ${r.is_available ? '<i class="fa-solid fa-check"></i> Available' : '<i class="fa-solid fa-ban"></i> Inactive'}
+                        </span>
+                    </td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-white-custom me-1" onclick="viewRoomSchedule(${r.id})" title="View Room Schedule">
+                            <i class="fa-solid fa-calendar text-primary"></i>
+                        </button>
+                        <button class="btn btn-sm btn-white-custom text-danger" onclick="deleteClassroom(${r.id})" title="Delete">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    } catch (err) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-danger">Error loading classrooms.</td></tr>';
+    }
+}
+
+async function viewRoomSchedule(roomId) {
+    try {
+        const res = await fetch(`/api/classrooms/${roomId}/schedule`);
+        const json = await res.json();
+        if (!json.classroom) return;
+
+        const room = json.classroom;
+        const sessions = json.schedule || [];
+
+        const body = document.getElementById('roomScheduleModalBody');
+        body.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h5 class="mb-0 text-primary">${room.name} (${room.room_type})</h5>
+                    <small class="text-muted">${room.building} &bull; Capacity: ${room.capacity} seats</small>
+                </div>
+                <span class="badge-saas badge-saas-primary">${sessions.length} sessions booked</span>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table-saas">
+                    <thead>
+                        <tr>
+                            <th>Day</th>
+                            <th>Period</th>
+                            <th>Subject</th>
+                            <th>Batch</th>
+                            <th>Instructor</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${sessions.map(s => `
+                            <tr>
+                                <td><strong>${s.day}</strong></td>
+                                <td>Period ${s.period}</td>
+                                <td>${s.subject_name}</td>
+                                <td><span class="badge-saas badge-saas-primary">${s.batch_name}</span></td>
+                                <td>${s.faculty_name}</td>
+                            </tr>
+                        `).join('') || '<tr><td colspan="5" class="text-center py-3 text-muted">No classes scheduled in this room.</td></tr>'}
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+        new bootstrap.Modal(document.getElementById('roomScheduleModal')).show();
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+async function deleteClassroom(id) {
+    if (!confirm('Are you sure you want to remove this classroom?')) return;
+    try {
+        const res = await fetch(`/api/classrooms/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+            showToast("Classroom removed.");
+            loadClassrooms();
+        } else {
+            showToast("Failed to delete classroom", true);
+        }
+    } catch (err) {
+        console.error(err);
+    }
+}
+</script>
+{% endblock %}

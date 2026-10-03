@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+
+{% block title %}Faculty Availability Matrix{% endblock %}
+
+{% block content %}
+<div class="availability-shell">
+    <div class="page-header-row">
+        <div class="page-heading-group">
+            <h2>Faculty Availability & Unavailability Matrix</h2>
+            <p>Define weekly unavailable time blocks to prevent scheduling classes during research, meetings, or leaves.</p>
+        </div>
+        <div class="page-action-group">
+            <a href="/faculty" class="btn-white-custom">
+                <i class="fa-solid fa-arrow-left"></i> Back to Faculty
+            </a>
+        </div>
+    </div>
+
+    <!-- Faculty Selector Bar -->
+    <div class="card-saas mb-4">
+        <div class="card-saas-body p-3">
+            <div class="row g-3 align-items-center">
+                <div class="col-md-6">
+                    <label class="form-label-saas"><i class="fa-solid fa-user-tie text-primary me-1"></i> Select Faculty Member to Manage Availability:</label>
+                    <select class="form-select-saas" id="availFacultySelect">
+                        {% for f in faculty %}
+                        <option value="{{ f.id }}">{{ f.name }} &ndash; {{ f.department }} ({{ f.designation }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6 d-flex align-items-end gap-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge-saas badge-saas-success"><i class="fa-solid fa-check"></i> Available (Click to Block)</span>
+                        <span class="badge-saas badge-saas-danger"><i class="fa-solid fa-ban"></i> Blocked (Unavailable)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Interactive Availability Grid Table -->
+    <div class="card-saas">
+        <div class="card-saas-header">
+            <div class="card-saas-title">
+                <i class="fa-solid fa-calendar-check"></i>
+                <h4 id="gridFacultyNameTitle">Weekly Availability Schedule</h4>
+            </div>
+            <span class="text-muted small">Click any period slot to toggle availability status</span>
+        </div>
+        <div class="card-saas-body p-0">
+            <div class="table-responsive">
+                <table class="table-saas text-center" id="availabilityGridTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 140px; text-align: left;">Day of Week</th>
+                            {% for p in periods %}
+                            <th>Period {{ p }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody id="availGridBody">
+                        {% for day in working_days %}
+                        <tr>
+                            <td class="fw-bold text-start bg-light">{{ day }}</td>
+                            {% for p in periods %}
+                            <td class="avail-slot-cell p-2" id="slot_{{ day }}_{{ p }}" data-day="{{ day }}" data-period="{{ p }}">
+                                <button type="button" class="btn btn-sm btn-outline-success w-100 avail-toggle-btn" onclick="toggleSlot('{{ day }}', {{ p }})">
+                                    <i class="fa-solid fa-check me-1"></i> Free
+                                </button>
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentFacultyId = null;
+let currentUnavail = [];
+
+document.addEventListener('DOMContentLoaded', () => {
+    const select = document.getElementById('availFacultySelect');
+    if (select) {
+        currentFacultyId = select.value;
+        loadFacultyAvail(currentFacultyId);
+        select.addEventListener('change', (e) => {
+            currentFacultyId = e.target.value;
+            loadFacultyAvail(currentFacultyId);
+        });
+    }
+});
+
+async function loadFacultyAvail(facId) {
+    if (!facId) return;
+    try {
+        const res = await fetch(`/api/faculty/${facId}`);
+        const json = await res.json();
+        if (!json.faculty) return;
+
+        document.getElementById('gridFacultyNameTitle').innerText = `${json.faculty.name} &mdash; Availability Schedule`;
+        currentUnavail = json.unavailable_slots || [];
+
+        // Reset all buttons to Free
+        document.querySelectorAll('.avail-toggle-btn').forEach(btn => {
+            btn.className = 'btn btn-sm btn-outline-success w-100 avail-toggle-btn';
+            btn.innerHTML = '<i class="fa-solid fa-check me-1"></i> Free';
+        });
+
+        // Mark unavail slots
+        currentUnavail.forEach(u => {
+            const cell = document.getElementById(`slot_${u.day}_${u.period}`);
+            if (cell) {
+                const btn = cell.querySelector('.avail-toggle-btn');
+                if (btn) {
+                    btn.className = 'btn btn-sm btn-danger w-100 avail-toggle-btn';
+                    btn.innerHTML = `<i class="fa-solid fa-ban me-1"></i> Blocked`;
+                    btn.title = u.reason || 'Unavailable';
+                }
+            }
+        });
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+async function toggleSlot(day, period) {
+    if (!currentFacultyId) return;
+
+    const isCurrentlyBlocked = currentUnavail.some(u => u.day === day && u.period === period);
+    const newAvailState = isCurrentlyBlocked ? 1 : 0; // if blocked, make available (1); if free, block (0)
+    let reason = '';
+
+    if (newAvailState === 0) {
+        reason = prompt(`Enter reason for blocking ${day} Period ${period}:`, "Departmental Meeting / Research") || "Personal unavailable block";
+    }
+
+    try {
+        const res = await fetch('/api/faculty/availability/toggle', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                faculty_id: parseInt(currentFacultyId),
+                day: day,
+                period: period,
+                is_available: newAvailState,
+                reason: reason
+            })
+        });
+
+        if (res.ok) {
+            showToast(newAvailState === 0 ? `Period blocked for faculty.` : `Period set to available.`);
+            loadFacultyAvail(currentFacultyId);
+        } else {
+            showToast("Failed to update slot", true);
+        }
+    } catch (err) {
+        console.error(err);
+    }
+}
+</script>
+{% endblock %}

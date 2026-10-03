@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block title %}Interactive Timetable Calendar{% endblock %}
+
+{% block content %}
+<div class="timetable-shell">
+    <!-- Header with View Controls -->
+    <div class="page-header-row no-print">
+        <div class="page-heading-group">
+            <h2>Visual Timetable Management</h2>
+            <p>Omniscol-inspired interactive grid with drag-and-drop conflict-checked rescheduling.</p>
+        </div>
+        <div class="page-action-group">
+            <div class="btn-group" role="group" aria-label="View toggle">
+                <button type="button" class="btn btn-outline-primary active" id="viewModeWeekly">
+                    <i class="fa-solid fa-calendar-week me-1"></i> Weekly Grid
+                </button>
+                <button type="button" class="btn btn-outline-primary" id="viewModeCompact">
+                    <i class="fa-solid fa-table-cells me-1"></i> Compact View
+                </button>
+                <button type="button" class="btn btn-outline-primary" id="viewModeDaily">
+                    <i class="fa-regular fa-calendar-day me-1"></i> Daily View
+                </button>
+            </div>
+            <button class="btn-white-custom" id="exportTimetableCsvBtn" title="Export CSV">
+                <i class="fa-solid fa-file-csv text-success"></i> Export CSV
+            </button>
+            <button class="btn-white-custom" id="printTimetableBtn" title="Print Timetable">
+                <i class="fa-solid fa-print text-primary"></i> Print / PDF
+            </button>
+            <a href="/generate" class="btn-accent-custom">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> Regenerate
+            </a>
+        </div>
+    </div>
+
+    <!-- Multi-Dimensional Filter Toolbar (Batch, Faculty, Room, Department) -->
+    <div class="card-saas mb-4 no-print">
+        <div class="card-saas-body p-3">
+            <div class="row g-2 align-items-center">
+                <!-- Batch Filter -->
+                <div class="col-md-3 col-sm-6">
+                    <label class="form-label-saas mb-1"><i class="fa-solid fa-users text-primary me-1"></i> Student Batch</label>
+                    <select class="form-select-saas" id="filterBatch">
+                        <option value="" selected>All Student Batches (Full College Schedule)</option>
+                        {% for b in batches %}
+                        <option value="{{ b.id }}">{{ b.name }} (Sem {{ b.semester }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Faculty Filter -->
+                <div class="col-md-3 col-sm-6">
+                    <label class="form-label-saas mb-1"><i class="fa-solid fa-chalkboard-user text-accent me-1"></i> Faculty Member</label>
+                    <select class="form-select-saas" id="filterFaculty">
+                        <option value="">All Faculty</option>
+                        {% for f in faculty %}
+                        <option value="{{ f.id }}">{{ f.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Classroom Filter -->
+                <div class="col-md-3 col-sm-6">
+                    <label class="form-label-saas mb-1"><i class="fa-solid fa-building text-success me-1"></i> Classroom / Lab</label>
+                    <select class="form-select-saas" id="filterRoom">
+                        <option value="">All Rooms & Labs</option>
+                        {% for r in rooms %}
+                        <option value="{{ r.id }}">{{ r.name }} ({{ r.room_type }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Department Filter -->
+                <div class="col-md-3 col-sm-6">
+                    <label class="form-label-saas mb-1"><i class="fa-solid fa-sitemap text-muted me-1"></i> Department</label>
+                    <select class="form-select-saas" id="filterDept">
+                        <option value="">All Departments</option>
+                        {% for d in departments %}
+                        <option value="{{ d }}">{{ d }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Selection Info Bar & Drag Hint -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="d-flex align-items-center gap-2">
+            <h5 class="mb-0" id="currentScheduleTitle">Global Campus Timetable</h5>
+            <span class="badge-saas badge-saas-primary" id="scheduleCountBadge">0 sessions</span>
+        </div>
+        <div class="d-none d-md-flex align-items-center gap-2 text-muted small">
+            <i class="fa-solid fa-arrows-up-down-left-right text-accent"></i>
+            <span>Drag any class session to another slot to reschedule &bull; All 6 Periods & Days Mon&ndash;Sat fully visible</span>
+        </div>
+    </div>
+
+    <!-- Timetable Calendar Table Shell -->
+    <div class="timetable-wrapper">
+        <div class="table-responsive">
+            <table class="timetable-grid-table" id="timetableMainTable">
+                <thead id="timetableHeader">
+                    <tr>
+                        <th class="th-day-col">Day / Time</th>
+                        {% for p in period_timings %}
+                            {% if p.is_break %}
+                                <th class="recess-column">
+                                    <span>LUNCH</span>
+                                </th>
+                            {% else %}
+                                <th class="th-period-col">
+                                    <span class="th-period-name">{{ p.label }}</span>
+                                    <span class="th-period-timing">{{ p.start_time }} &ndash; {{ p.end_time }}</span>
+                                </th>
+                            {% endif %}
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody id="timetableGridBody">
+                    <tr>
+                        <td colspan="8" class="text-center py-5 text-muted">
+                            <div class="spinner-border spinner-border-sm text-primary me-2"></div>
+                            Loading academic calendar schedule...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Class Detail / Reschedule Dialog -->
+<div class="modal fade" id="classDetailModal" tabindex="-1" aria-labelledby="classDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content modal-content-saas">
+            <div class="modal-header-saas">
+                <h5 class="modal-title" id="classDetailModalLabel">
+                    <i class="fa-solid fa-graduation-cap text-primary me-2"></i>Class Session Information
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body-saas" id="classDetailModalBody">
+                <!-- Dynamically populated -->
+            </div>
+            <div class="modal-footer-saas">
+                <button type="button" class="btn-white-custom" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/timetable.js"></script>
+{% endblock %}

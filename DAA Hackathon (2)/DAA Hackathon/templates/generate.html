@@ -1,0 +1,335 @@
+{% extends "base.html" %}
+
+{% block title %}Automated Timetable Generation Workspace{% endblock %}
+
+{% block content %}
+<div class="generate-shell">
+    <div class="page-header-row">
+        <div class="page-heading-group">
+            <h2>AI & DAA Timetable Generator</h2>
+            <p>Blink-inspired intelligent scheduler leveraging Graph Coloring, Greedy heuristics, and Backtracking algorithms.</p>
+        </div>
+        <div class="page-action-group">
+            <a href="/timetable" class="btn-white-custom">
+                <i class="fa-solid fa-calendar-days"></i> Current Timetable
+            </a>
+            <a href="/comparison" class="btn-white-custom">
+                <i class="fa-solid fa-scale-balanced"></i> Compare Algorithms
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Configuration Column -->
+        <div class="col-lg-5">
+            <div class="card-saas">
+                <div class="card-saas-header">
+                    <div class="card-saas-title">
+                        <i class="fa-solid fa-sliders"></i>
+                        <h4>Scheduling Workspace Config</h4>
+                    </div>
+                </div>
+                <div class="card-saas-body">
+                    <form id="generateTimetableForm">
+                        <!-- 1. Algorithm Selector -->
+                        <div class="mb-4">
+                            <label class="form-label-saas">
+                                <i class="fa-solid fa-microchip text-primary me-1"></i> Core DAA Scheduling Algorithm *
+                            </label>
+                            
+                            <div class="d-flex flex-column gap-2 mt-2">
+                                <!-- Graph Coloring -->
+                                <label class="p-3 border rounded-3 d-flex align-items-start gap-3 cursor-pointer algo-select-item" style="background: #FFFFFF;">
+                                    <input type="radio" name="algorithm" value="graph_coloring" class="mt-1" checked>
+                                    <div>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <strong style="color: var(--primary);">Graph Coloring (Welsh-Powell)</strong>
+                                            <span class="badge-saas badge-saas-accent">Chromatic</span>
+                                        </div>
+                                        <small class="text-muted d-block mt-1">Models classes as vertices and shared faculty/batch clashes as edges; assigns optimal time-slot colors.</small>
+                                    </div>
+                                </label>
+
+                                <!-- Greedy -->
+                                <label class="p-3 border rounded-3 d-flex align-items-start gap-3 cursor-pointer algo-select-item" style="background: #FFFFFF;">
+                                    <input type="radio" name="algorithm" value="greedy" class="mt-1">
+                                    <div>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <strong style="color: var(--primary);">Greedy Heuristic</strong>
+                                            <span class="badge-saas badge-saas-success">Ultra Fast</span>
+                                        </div>
+                                        <small class="text-muted d-block mt-1">Prioritizes lab and constrained subjects; greedily selects first valid slot with minimal penalty.</small>
+                                    </div>
+                                </label>
+
+                                <!-- Backtracking -->
+                                <label class="p-3 border rounded-3 d-flex align-items-start gap-3 cursor-pointer algo-select-item" style="background: #FFFFFF;">
+                                    <input type="radio" name="algorithm" value="backtracking" class="mt-1">
+                                    <div>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <strong style="color: var(--primary);">Backtracking Search</strong>
+                                            <span class="badge-saas badge-saas-primary">Exact DFS</span>
+                                        </div>
+                                        <small class="text-muted d-block mt-1">Recursive depth-first search with MRV heuristic, forward checking, and conflict reversion.</small>
+                                    </div>
+                                </label>
+
+                                <!-- Hybrid -->
+                                <label class="p-3 border rounded-3 d-flex align-items-start gap-3 cursor-pointer algo-select-item" style="background: #FFFFFF;">
+                                    <input type="radio" name="algorithm" value="hybrid" class="mt-1">
+                                    <div>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <strong style="color: var(--primary);">Hybrid (Greedy + Backtracking)</strong>
+                                            <span class="badge-saas badge-saas-purple" style="background: #F3EFFC; color: #8B5CF6;">Optimal</span>
+                                        </div>
+                                        <small class="text-muted d-block mt-1">Greedy pre-allocation of scarce lab hardware followed by backtracking search for remaining courses.</small>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- 2. Target Department & Batches -->
+                        <div class="mb-3">
+                            <label for="batchSelect" class="form-label-saas">
+                                <i class="fa-solid fa-users-rectangle text-primary me-1"></i> Target Student Batches
+                            </label>
+                            <select class="form-select-saas" id="batchSelect">
+                                <option value="all" selected>All Batches (Global Campus Allocation)</option>
+                                {% for b in batches %}
+                                <option value="{{ b.id }}">{{ b.name }} &ndash; {{ b.department }} (Sem {{ b.semester }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- 3. Working Days -->
+                        <div class="mb-3">
+                            <label class="form-label-saas">
+                                <i class="fa-solid fa-calendar-days text-primary me-1"></i> Working Days
+                            </label>
+                            <div class="d-flex flex-wrap gap-2 mt-1">
+                                {% for day in default_days %}
+                                <label class="border rounded px-3 py-1 bg-white cursor-pointer d-flex align-items-center gap-2 small">
+                                    <input type="checkbox" name="working_days" value="{{ day }}" checked>
+                                    <span>{{ day }}</span>
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <!-- 4. Periods & Lunch Break Settings -->
+                        <div class="row g-2 mb-4">
+                            <div class="col-6">
+                                <label class="form-label-saas">Teaching Periods/Day</label>
+                                <select class="form-select-saas" id="periodsInput">
+                                    <option value="5">5 Periods (Early Close)</option>
+                                    <option value="6" selected>6 Periods (Standard)</option>
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label-saas">Lunch Break</label>
+                                <input type="text" class="form-control-saas" value="13:15 - 14:00" readonly>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn-primary-custom btn-lg justify-content-center" id="generateSubmitBtn">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i> Generate Conflict-Free Timetable
+                            </button>
+                            <button type="button" class="btn-white-custom justify-content-center" id="regenerateBtn">
+                                <i class="fa-solid fa-rotate"></i> Regenerate
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Execution Results & Progress Column -->
+        <div class="col-lg-7">
+            <!-- Results Container Card -->
+            <div class="card-saas mb-4">
+                <div class="card-saas-header">
+                    <div class="card-saas-title">
+                        <i class="fa-solid fa-square-poll-vertical"></i>
+                        <h4>Algorithm Execution & Performance Metrics</h4>
+                    </div>
+                    <span class="badge-saas badge-saas-secondary" id="solverStatusBadge">Ready</span>
+                </div>
+                <div class="card-saas-body">
+                    <!-- Idle State -->
+                    <div id="solverIdleState" class="text-center py-5">
+                        <div class="p-4 rounded-circle bg-light d-inline-flex mb-3 text-primary fs-1">
+                            <i class="fa-solid fa-brain"></i>
+                        </div>
+                        <h5>Ready to Generate Schedule</h5>
+                        <p class="text-muted small mx-auto" style="max-width: 440px;">
+                            Select your algorithm on the left and click <strong>Generate Conflict-Free Timetable</strong>. The engine will evaluate the constraint matrix across faculty, batches, and lab capacities.
+                        </p>
+                    </div>
+
+                    <!-- Solving / Loading State -->
+                    <div id="solverLoadingState" class="text-center py-5 d-none">
+                        <div class="spinner-border text-primary mb-3" role="status" style="width: 3.5rem; height: 3.5rem;"></div>
+                        <h5>Executing DAA Scheduling Algorithm...</h5>
+                        <p class="text-muted small" id="solverLoadingText">Resolving faculty availability, room capacity, and timetable matrices</p>
+                    </div>
+
+                    <!-- Metrics Results State -->
+                    <div id="solverMetricsState" class="d-none">
+                        <!-- Result Alert Banner -->
+                        <div class="alert alert-success d-flex align-items-center mb-4" id="resultBanner">
+                            <i class="fa-solid fa-circle-check fs-3 me-3 text-success"></i>
+                            <div>
+                                <h6 class="mb-0 fw-bold" id="resultBannerTitle">Timetable Generated Successfully!</h6>
+                                <small id="resultBannerSubtitle">All hard academic constraints satisfied with zero conflicts.</small>
+                            </div>
+                        </div>
+
+                        <!-- 4 KPI Blocks -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-6 col-md-3">
+                                <div class="p-3 bg-light rounded-3 text-center border">
+                                    <span class="text-muted small d-block mb-1">Execution Time</span>
+                                    <h4 class="mb-0 text-primary fw-bold" id="resExecTime">0 ms</h4>
+                                    <small class="text-muted">Runtime</small>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="p-3 bg-light rounded-3 text-center border">
+                                    <span class="text-muted small d-block mb-1">Classes Scheduled</span>
+                                    <h4 class="mb-0 text-success fw-bold" id="resScheduled">0 / 0</h4>
+                                    <small class="text-muted">Assigned</small>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="p-3 bg-light rounded-3 text-center border">
+                                    <span class="text-muted small d-block mb-1">Detected Conflicts</span>
+                                    <h4 class="mb-0 text-primary fw-bold" id="resConflicts">0</h4>
+                                    <small class="text-muted">Violations</small>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="p-3 bg-light rounded-3 text-center border">
+                                    <span class="text-muted small d-block mb-1">Backtracks / Steps</span>
+                                    <h4 class="mb-0 fw-bold" id="resBacktracks">0</h4>
+                                    <small class="text-muted" id="resDecisions">0 decisions</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Action Links -->
+                        <div class="d-flex flex-wrap gap-2 pt-3 border-top">
+                            <a href="/timetable" class="btn-primary-custom">
+                                <i class="fa-solid fa-calendar-days"></i> Open Timetable Calendar
+                            </a>
+                            <button type="button" class="btn-white-custom" id="viewTraceBtn">
+                                <i class="fa-solid fa-list-check text-primary"></i> Inspect Decision Trace
+                            </button>
+                            <a href="/conflicts" class="btn-white-custom">
+                                <i class="fa-solid fa-shield-halved text-success"></i> Audit Conflicts (0)
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Algorithm Theoretical Overview -->
+            <div class="card-saas">
+                <div class="card-saas-header">
+                    <div class="card-saas-title">
+                        <i class="fa-solid fa-book-open"></i>
+                        <h4>DAA Algorithm Characteristics & Guarantees</h4>
+                    </div>
+                </div>
+                <div class="card-saas-body">
+                    <div class="accordion accordion-flush" id="algoAccordion">
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#cOne">
+                                    1. Graph Coloring (Welsh-Powell Chromatic Scheduling)
+                                </button>
+                            </h2>
+                            <div id="cOne" class="accordion-collapse collapse" data-bs-parent="#algoAccordion">
+                                <div class="accordion-body text-muted small">
+                                    Constructs conflict interference graph $G=(V, E)$ where vertices represent class sessions and edges represent mutual exclusivity (shared faculty, batch, or lab hardware). Colors correspond to discrete time slots. Welsh-Powell orders vertices by degree descending and greedily assigns the lowest valid color, calculating the chromatic number $\chi(G)$.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#cTwo">
+                                    2. Greedy Algorithm (Priority & Constraint-Driven Selection)
+                                </button>
+                            </h2>
+                            <div id="cTwo" class="accordion-collapse collapse" data-bs-parent="#algoAccordion">
+                                <div class="accordion-body text-muted small">
+                                    Orders classes using Most Constrained Variable (MCV) criteria (Labs first, High Priority, highest student strength). Greedily assigns each class to the earliest available valid time slot and room with minimal penalty. Records any unscheduled classes.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#cThree">
+                                    3. Backtracking (Recursive Depth-First Search with MRV)
+                                </button>
+                            </h2>
+                            <div id="cThree" class="accordion-collapse collapse" data-bs-parent="#algoAccordion">
+                                <div class="accordion-body text-muted small">
+                                    Systematically explores the combinatorial solution space. Assigns slots to classes recursively. If any hard constraint fails, it undos the decision (backtracks) to explore alternative choices. Guarantees finding a complete conflict-free solution if one exists.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Algorithm Decision Trace -->
+<div class="modal fade" id="traceModal" tabindex="-1" aria-labelledby="traceModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content modal-content-saas">
+            <div class="modal-header-saas">
+                <h5 class="modal-title" id="traceModalLabel">
+                    <i class="fa-solid fa-list-check text-primary me-2"></i>Algorithm Step-by-Step Execution Trace
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body-saas p-0">
+                <div class="table-responsive" style="max-height: 500px;">
+                    <table class="table-saas" id="traceTable">
+                        <thead>
+                            <tr>
+                                <th>Step #</th>
+                                <th>Session Code</th>
+                                <th>Subject</th>
+                                <th>Batch</th>
+                                <th>Faculty</th>
+                                <th>Room</th>
+                                <th>Slot Assigned</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="traceTableBody">
+                            <tr>
+                                <td colspan="8" class="text-center py-4 text-muted">No execution trace available.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer-saas">
+                <button type="button" class="btn-white-custom" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/generate.js"></script>
+{% endblock %}

@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+
+{% block title %}Conflict Detection & Management{% endblock %}
+
+{% block content %}
+<div class="conflicts-shell">
+    <div class="page-header-row">
+        <div class="page-heading-group">
+            <h2>Academic Conflict Detection & Resolution</h2>
+            <p>Automated constraint verification engine detecting double-booking, availability clashes, and capacity overloads.</p>
+        </div>
+        <div class="page-action-group">
+            <button class="btn-primary-custom" id="runLiveAuditBtn">
+                <i class="fa-solid fa-magnifying-glass-chart"></i> Re-Run Conflict Audit
+            </button>
+            <a href="/generate" class="btn-accent-custom">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> Regenerate Timetable
+            </a>
+        </div>
+    </div>
+
+    <!-- Status Overview Alert Banner -->
+    <div id="conflictAuditBanner" class="alert alert-success d-flex align-items-center mb-4">
+        <i class="fa-solid fa-shield-check fs-2 text-success me-3"></i>
+        <div>
+            <h5 class="mb-1 fw-bold" id="auditBannerTitle">Auditing Timetable Schedule...</h5>
+            <p class="mb-0 text-muted small" id="auditBannerDesc">Scanning 6 hard academic constraint rules across all batches and rooms.</p>
+        </div>
+    </div>
+
+    <!-- 6 Rule Verification Status Cards -->
+    <div class="row g-3 mb-4">
+        <!-- 1. Faculty Double-Booking -->
+        <div class="col-md-4 col-sm-6">
+            <div class="p-3 bg-white rounded-3 border d-flex align-items-center gap-3 shadow-sm">
+                <div class="kpi-icon-wrap kpi-icon-primary"><i class="fa-solid fa-user-xmark"></i></div>
+                <div>
+                    <span class="text-muted small d-block">1. Faculty Clashes</span>
+                    <strong class="text-success" id="ruleFacClash"><i class="fa-solid fa-check me-1"></i> Pass (0 Clashes)</strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Room Double-Booking -->
+        <div class="col-md-4 col-sm-6">
+            <div class="p-3 bg-white rounded-3 border d-flex align-items-center gap-3 shadow-sm">
+                <div class="kpi-icon-wrap kpi-icon-accent"><i class="fa-solid fa-door-closed"></i></div>
+                <div>
+                    <span class="text-muted small d-block">2. Classroom Collision</span>
+                    <strong class="text-success" id="ruleRoomClash"><i class="fa-solid fa-check me-1"></i> Pass (0 Clashes)</strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Batch Clashes -->
+        <div class="col-md-4 col-sm-6">
+            <div class="p-3 bg-white rounded-3 border d-flex align-items-center gap-3 shadow-sm">
+                <div class="kpi-icon-wrap kpi-icon-purple"><i class="fa-solid fa-users-slash"></i></div>
+                <div>
+                    <span class="text-muted small d-block">3. Student Batch Clashes</span>
+                    <strong class="text-success" id="ruleBatchClash"><i class="fa-solid fa-check me-1"></i> Pass (0 Clashes)</strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Faculty Blocked Hours -->
+        <div class="col-md-4 col-sm-6">
+            <div class="p-3 bg-white rounded-3 border d-flex align-items-center gap-3 shadow-sm">
+                <div class="kpi-icon-wrap kpi-icon-warning"><i class="fa-solid fa-calendar-xmark"></i></div>
+                <div>
+                    <span class="text-muted small d-block">4. Faculty Blocked Hours</span>
+                    <strong class="text-success" id="ruleUnavail"><i class="fa-solid fa-check me-1"></i> Pass (0 Clashes)</strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. Room Seating Capacity -->
+        <div class="col-md-4 col-sm-6">
+            <div class="p-3 bg-white rounded-3 border d-flex align-items-center gap-3 shadow-sm">
+                <div class="kpi-icon-wrap kpi-icon-success"><i class="fa-solid fa-people-roof"></i></div>
+                <div>
+                    <span class="text-muted small d-block">5. Room Seating Capacity</span>
+                    <strong class="text-success" id="ruleCapacity"><i class="fa-solid fa-check me-1"></i> Pass (Sufficient)</strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- 6. Lab Facility Type -->
+        <div class="col-md-4 col-sm-6">
+            <div class="p-3 bg-white rounded-3 border d-flex align-items-center gap-3 shadow-sm">
+                <div class="kpi-icon-wrap kpi-icon-primary"><i class="fa-solid fa-flask-vial"></i></div>
+                <div>
+                    <span class="text-muted small d-block">6. Lab Facility Matching</span>
+                    <strong class="text-success" id="ruleLabType"><i class="fa-solid fa-check me-1"></i> Pass (Correct)</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Conflict Details & Remediation Table -->
+    <div class="card-saas">
+        <div class="card-saas-header">
+            <div class="card-saas-title">
+                <i class="fa-solid fa-list-check"></i>
+                <h4>Conflict Inspection Report & Suggested Corrections</h4>
+            </div>
+            <span class="badge-saas badge-saas-primary" id="conflictCountPill">0 Conflicts</span>
+        </div>
+        <div class="card-saas-body p-0">
+            <div class="table-saas-container">
+                <table class="table-saas" id="conflictsTable">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Conflict Category</th>
+                            <th>Subject Session</th>
+                            <th>Faculty Involved</th>
+                            <th>Classroom</th>
+                            <th>Day & Period</th>
+                            <th>Recommended Solution</th>
+                        </tr>
+                    </thead>
+                    <tbody id="conflictsTableBody">
+                        <tr>
+                            <td colspan="7" class="text-center py-4 text-muted">Auditing schedule...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    runAudit();
+
+    document.getElementById('runLiveAuditBtn')?.addEventListener('click', () => {
+        runAudit();
+    });
+});
+
+async function runAudit() {
+    const tbody = document.getElementById('conflictsTableBody');
+    const banner = document.getElementById('conflictAuditBanner');
+    const title = document.getElementById('auditBannerTitle');
+    const desc = document.getElementById('auditBannerDesc');
+    const countPill = document.getElementById('conflictCountPill');
+
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Evaluating 6 academic constraint rules...</td></tr>';
+
+    try {
+        const res = await fetch('/api/conflicts');
+        const json = await res.json();
+        const conflicts = json.conflicts || [];
+        const count = json.conflicts_count || 0;
+        const rules = json.rule_statuses || {};
+
+        countPill.innerText = `${count} Conflicts`;
+
+        // Update rule cards
+        updateRuleCard('ruleFacClash', rules.faculty_clash, 'Faculty Clashes');
+        updateRuleCard('ruleRoomClash', rules.classroom_clash, 'Room Double-Booking');
+        updateRuleCard('ruleBatchClash', rules.batch_clash, 'Batch Clashes');
+        updateRuleCard('ruleUnavail', rules.faculty_unavailable, 'Unavailable Blocks');
+        updateRuleCard('ruleCapacity', rules.capacity_overload, 'Capacity Overload');
+        updateRuleCard('ruleLabType', rules.lab_mismatch, 'Lab Mismatches');
+
+        if (count === 0) {
+            banner.className = 'alert alert-success d-flex align-items-center mb-4';
+            title.innerText = '100% Conflict-Free Timetable!';
+            desc.innerText = 'Zero double-bookings, availability violations, or capacity overflows detected in the active database schedule.';
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="text-center py-5">
+                        <i class="fa-solid fa-circle-check text-success fs-1 mb-2 d-block"></i>
+                        <h6 class="text-success fw-bold">All Constraints Validated</h6>
+                        <p class="text-muted small mb-0">The generated academic timetable strictly complies with all faculty, room, and batch constraints.</p>
+                    </td>
+                </tr>
+            `;
+        } else {
+            banner.className = 'alert alert-danger d-flex align-items-center mb-4';
+            title.innerText = `${count} Scheduling Conflicts Detected`;
+            desc.innerText = 'Resolve the constraint collisions below using the suggested corrections or regenerate via Backtracking.';
+
+            tbody.innerHTML = conflicts.map((c, i) => `
+                <tr>
+                    <td><strong>#${i + 1}</strong></td>
+                    <td><span class="badge-saas badge-saas-danger">${c.type}</span></td>
+                    <td><strong>${c.subject || 'N/A'}</strong></td>
+                    <td>${c.faculty || 'N/A'}</td>
+                    <td><code>${c.classroom || 'N/A'}</code></td>
+                    <td><strong>${c.day || ''}</strong> Period ${c.period || ''}</td>
+                    <td>
+                        <span class="text-primary small">
+                            <i class="fa-solid fa-lightbulb me-1"></i> ${c.suggested_correction || 'Reallocate to an alternate time slot.'}
+                        </span>
+                    </td>
+                </tr>
+            `).join('');
+        }
+    } catch (err) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-danger">Error running conflict audit.</td></tr>';
+    }
+}
+
+function updateRuleCard(elemId, hasError, label) {
+    const el = document.getElementById(elemId);
+    if (!el) return;
+    if (hasError) {
+        el.className = 'text-danger fw-bold';
+        el.innerHTML = `<i class="fa-solid fa-xmark me-1"></i> Violation Detected`;
+    } else {
+        el.className = 'text-success fw-bold';
+        el.innerHTML = `<i class="fa-solid fa-check me-1"></i> Pass (0 Clashes)`;
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+
+{% block title %}Reports & Academic Analytics{% endblock %}
+
+{% block content %}
+<div class="reports-shell">
+    <div class="page-header-row">
+        <div class="page-heading-group">
+            <h2>Institutional Reports & Analytics</h2>
+            <p>Exportable academic summaries, faculty workload audits, and facility utilization metrics.</p>
+        </div>
+        <div class="page-action-group">
+            <button class="btn-white-custom" onclick="window.print()">
+                <i class="fa-solid fa-print"></i> Print Report
+            </button>
+            <a href="/api/reports/export-csv/timetable" class="btn-primary-custom">
+                <i class="fa-solid fa-file-csv"></i> Download Master Timetable CSV
+            </a>
+        </div>
+    </div>
+
+    <!-- Quick Export Links Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card-saas p-3">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <h6 class="fw-bold mb-0">Master Timetable</h6>
+                    <i class="fa-solid fa-calendar-days text-primary fs-4"></i>
+                </div>
+                <p class="text-muted small mb-3">All scheduled classes across all batches, rooms, and faculty members.</p>
+                <a href="/api/reports/export-csv/timetable" class="btn btn-sm btn-outline-primary w-100">
+                    <i class="fa-solid fa-download me-1"></i> Export Timetable CSV
+                </a>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card-saas p-3">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <h6 class="fw-bold mb-0">Faculty Workload Audit</h6>
+                    <i class="fa-solid fa-user-clock text-accent fs-4"></i>
+                </div>
+                <p class="text-muted small mb-3">Scheduled teaching hours, limits, and overload verification per instructor.</p>
+                <a href="/api/reports/export-csv/faculty_workload" class="btn btn-sm btn-outline-primary w-100">
+                    <i class="fa-solid fa-download me-1"></i> Export Workload CSV
+                </a>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card-saas p-3">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <h6 class="fw-bold mb-0">Classroom Space Directory</h6>
+                    <i class="fa-solid fa-building text-success fs-4"></i>
+                </div>
+                <p class="text-muted small mb-3">Room capacities, specialized laboratory spaces, and operational status.</p>
+                <a href="/api/reports/export-csv/classrooms" class="btn btn-sm btn-outline-primary w-100">
+                    <i class="fa-solid fa-download me-1"></i> Export Rooms CSV
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Faculty Workload Report Table -->
+    <div class="card-saas mb-4">
+        <div class="card-saas-header">
+            <div class="card-saas-title">
+                <i class="fa-solid fa-chalkboard-user"></i>
+                <h4>Faculty Workload Distribution Audit</h4>
+            </div>
+        </div>
+        <div class="card-saas-body p-0">
+            <div class="table-saas-container">
+                <table class="table-saas" id="workloadReportTable">
+                    <thead>
+                        <tr>
+                            <th>Faculty Member</th>
+                            <th>Department</th>
+                            <th>Designation</th>
+                            <th>Scheduled Hours</th>
+                            <th>Max Weekly Limit</th>
+                            <th>Utilization</th>
+                            <th>Compliance</th>
+                        </tr>
+                    </thead>
+                    <tbody id="workloadReportTableBody">
+                        <tr>
+                            <td colspan="7" class="text-center py-4 text-muted">Loading workload metrics...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Classroom Utilization Report Table -->
+    <div class="card-saas">
+        <div class="card-saas-header">
+            <div class="card-saas-title">
+                <i class="fa-solid fa-door-open"></i>
+                <h4>Classroom & Laboratory Space Utilization Report</h4>
+            </div>
+        </div>
+        <div class="card-saas-body p-0">
+            <div class="table-saas-container">
+                <table class="table-saas" id="roomReportTable">
+                    <thead>
+                        <tr>
+                            <th>Room Name</th>
+                            <th>Building</th>
+                            <th>Type</th>
+                            <th>Seating Capacity</th>
+                            <th>Booked Periods / Week</th>
+                            <th>Active Days</th>
+                            <th>Utilization %</th>
+                        </tr>
+                    </thead>
+                    <tbody id="roomReportTableBody">
+                        <tr>
+                            <td colspan="7" class="text-center py-4 text-muted">Loading room utilization metrics...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    loadWorkloadReport();
+    loadRoomReport();
+});
+
+async function loadWorkloadReport() {
+    const tbody = document.getElementById('workloadReportTableBody');
+    try {
+        const res = await fetch('/api/reports/faculty-workload');
+        const json = await res.json();
+        const list = json.data || [];
+
+        tbody.innerHTML = list.map(f => `
+            <tr>
+                <td><strong>${f.faculty_name}</strong></td>
+                <td><span class="text-muted">${f.department}</span></td>
+                <td>${f.designation}</td>
+                <td><strong>${f.scheduled_hours}</strong> hours</td>
+                <td>${f.max_hours_per_week} hours</td>
+                <td>
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="progress flex-grow-1" style="height: 6px; width: 60px;">
+                            <div class="progress-bar ${f.is_overloaded ? 'bg-danger' : 'bg-primary'}" style="width: ${Math.min(100, f.utilization_pct)}%"></div>
+                        </div>
+                        <span class="small fw-semibold">${f.utilization_pct}%</span>
+                    </div>
+                </td>
+                <td>
+                    <span class="badge-saas ${f.is_overloaded ? 'badge-saas-danger' : 'badge-saas-success'}">
+                        ${f.is_overloaded ? 'Overloaded' : 'Compliant'}
+                    </span>
+                </td>
+            </tr>
+        `).join('');
+    } catch (err) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-danger">Error loading workload.</td></tr>';
+    }
+}
+
+async function loadRoomReport() {
+    const tbody = document.getElementById('roomReportTableBody');
+    try {
+        const res = await fetch('/api/reports/room-utilization');
+        const json = await res.json();
+        const list = json.data || [];
+
+        tbody.innerHTML = list.map(r => `
+            <tr>
+                <td><strong class="text-primary">${r.room_name}</strong></td>
+                <td><span class="text-muted">${r.building}</span></td>
+                <td><span class="badge-saas ${r.room_type === 'Lab' ? 'badge-saas-accent' : 'badge-saas-primary'}">${r.room_type}</span></td>
+                <td>${r.capacity} seats</td>
+                <td><strong>${r.scheduled_periods}</strong> / 30</td>
+                <td>${r.active_days} days</td>
+                <td>
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="progress flex-grow-1" style="height: 6px; width: 60px;">
+                            <div class="progress-bar bg-success" style="width: ${r.utilization_pct}%"></div>
+                        </div>
+                        <span class="small fw-semibold">${r.utilization_pct}%</span>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+    } catch (err) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-danger">Error loading utilization.</td></tr>';
+    }
+}
+</script>
+{% endblock %}

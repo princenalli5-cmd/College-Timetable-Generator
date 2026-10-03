@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}System Settings & Academic Configuration{% endblock %}
+
+{% block content %}
+<div class="settings-shell">
+    <div class="page-header-row">
+        <div class="page-heading-group">
+            <h2>Institution Settings & Preferences</h2>
+            <p>Configure college identity, academic calendar defaults, teaching periods, and database parameters.</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="card-saas mb-4">
+                <div class="card-saas-header">
+                    <div class="card-saas-title">
+                        <i class="fa-solid fa-school"></i>
+                        <h4>College Information</h4>
+                    </div>
+                </div>
+                <div class="card-saas-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label-saas">College / University Name</label>
+                            <input type="text" class="form-control-saas" value="{{ college_name }}" readonly>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label-saas">Current Academic Year</label>
+                            <input type="text" class="form-control-saas" value="{{ academic_year }}" readonly>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label-saas">Active Semester</label>
+                            <input type="text" class="form-control-saas" value="Odd Semester (Fall 2025)" readonly>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-saas">
+                <div class="card-saas-header">
+                    <div class="card-saas-title">
+                        <i class="fa-solid fa-clock"></i>
+                        <h4>Standard Academic Bell Timings</h4>
+                    </div>
+                </div>
+                <div class="card-saas-body p-0">
+                    <div class="table-saas-container">
+                        <table class="table-saas">
+                            <thead>
+                                <tr>
+                                    <th>Period</th>
+                                    <th>Start Time</th>
+                                    <th>End Time</th>
+                                    <th>Duration</th>
+                                    <th>Type</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>Period 1</td><td>09:00</td><td>10:00</td><td>60 mins</td><td><span class="badge-saas badge-saas-primary">Instructional</span></td></tr>
+                                <tr><td>Period 2</td><td>10:00</td><td>11:00</td><td>60 mins</td><td><span class="badge-saas badge-saas-primary">Instructional</span></td></tr>
+                                <tr><td>Period 3</td><td>11:15</td><td>12:15</td><td>60 mins</td><td><span class="badge-saas badge-saas-primary">Instructional</span></td></tr>
+                                <tr><td>Period 4</td><td>12:15</td><td>13:15</td><td>60 mins</td><td><span class="badge-saas badge-saas-primary">Instructional</span></td></tr>
+                                <tr class="bg-light"><td>Lunch Recess</td><td>13:15</td><td>14:00</td><td>45 mins</td><td><span class="badge-saas badge-saas-warning">Break</span></td></tr>
+                                <tr><td>Period 5</td><td>14:00</td><td>15:00</td><td>60 mins</td><td><span class="badge-saas badge-saas-primary">Instructional</span></td></tr>
+                                <tr><td>Period 6</td><td>15:00</td><td>16:00</td><td>60 mins</td><td><span class="badge-saas badge-saas-primary">Instructional</span></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card-saas">
+                <div class="card-saas-header">
+                    <div class="card-saas-title">
+                        <i class="fa-solid fa-database"></i>
+                        <h4>System & Storage</h4>
+                    </div>
+                </div>
+                <div class="card-saas-body">
+                    <ul class="list-unstyled small">
+                        <li class="d-flex justify-content-between py-2 border-bottom">
+                            <span>Database Engine:</span> <strong>SQLite 3</strong>
+                        </li>
+                        <li class="d-flex justify-content-between py-2 border-bottom">
+                            <span>Constraint Engine:</span> <strong>DAA Rules Engine</strong>
+                        </li>
+                        <li class="d-flex justify-content-between py-2 border-bottom">
+                            <span>UI Design:</span> <strong>Edumerge / Blink / Omniscol</strong>
+                        </li>
+                        <li class="d-flex justify-content-between py-2">
+                            <span>Status:</span> <span class="badge-saas badge-saas-success">Operational</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
